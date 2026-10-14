@@ -2,7 +2,7 @@
 
 client_id = "675f553176d69d3d30fde74dc6891271"
 name = "Quote App"
-application_url = "https://quote-app-frontend-git-main-sk-9093.vercel.app"
+application_url = "https://dev-quote-app-frontend-git-main-sk-9093.vercel.app"
 embedded = true
 
 [webhooks]

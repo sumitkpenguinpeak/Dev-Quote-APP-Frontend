@@ -361,7 +361,7 @@
             return;
         }
         try {
-            const Response = await PPQuoteAPIcallFack('/collections', 'GET', QuoteJsonstringify({ shop: PPshop }));
+            const Response = await PPQuoteAPIcallFack('/collections', 'GET'); // shop Shopify proxy pote signed query ma mokle chhe, etle client thi nahi
             CollectionObj = Response && Response.data ? Response.data : null;
             if (!CollectionObj) return; // API down -> kai nahi badalvanu
             const raw = CollectionObj.settings || {};
