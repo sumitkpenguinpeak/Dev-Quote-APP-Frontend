@@ -60,7 +60,7 @@ const dotted = { borderBottom: '1px dotted var(--p-color-text-secondary)', curso
 const openThemeEditor = (shop) => () => {
   if (!shop) return;
   const apiKey = import.meta.env.VITE_SHOPIFY_API_KEY;
-  const handle = 'quote-app-embed';
+  const handle = 'dev-quote-app-embed';
   const params = new URLSearchParams({ context: 'apps', template: 'index' });
   if (apiKey) params.set('activateAppId', `${apiKey}/${handle}`);
   window.open(`https://${shop}/admin/themes/current/editor?${params.toString()}`, '_blank', 'noopener');
