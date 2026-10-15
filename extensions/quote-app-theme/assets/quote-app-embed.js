@@ -25,7 +25,7 @@
     /* =====================================================================
      * CONFIG
      * ===================================================================== */
-    const QuoteAuthUrl = window.PPQuoteApiUrl || '/apps/quote-app';
+    const QuoteAuthUrl = window.PPQuoteApiUrl || '/apps/dev-quote-app';
     const MONEY_FORMAT = window.PPQuoteMoneyFormat || '${{amount}}';
     const STORAGE_KEY = 'ppQuoe__row';
     const SETTINGS_CACHE_KEY = 'ppQuoe__settings';
