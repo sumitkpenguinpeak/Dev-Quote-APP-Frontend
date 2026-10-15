@@ -90,6 +90,7 @@ function mapQuote(raw) {
     customerInfo,
     number: q.quote_number ?? q.quote_id ?? q.number ?? "",
     status: q.status ?? "",
+    currency: q.currency ?? null, // store ni currency (INR / USD ...), getCurrency(quote) aa j vape chhe
     draftOrderId: q.shopify_draft_order_id ?? null, // draft order ban gayo hoy to id aave
     createdAt,
     name,
@@ -318,7 +319,7 @@ function ShippingModal({ open, value, quoteId, currency, onClose, onApply }) {
               <BlockStack gap="200">
                 {rates.map((r) => (
                   <RadioButton key={r.handle} id={`ship-rate-${r.handle}`} name="ship-rate"
-                    label={`${r.title} - ${money(r.price, currency || "INR")}`}
+                    label={`${r.title} - ${money(r.price, currency || "USD")}`}
                     checked={s.handle === r.handle} onChange={() => setS((p) => ({ ...p, handle: r.handle }))} />
                 ))}
               </BlockStack>

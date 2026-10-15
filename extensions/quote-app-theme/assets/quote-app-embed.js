@@ -274,8 +274,7 @@
     const PPQuoteAPIcallFack = async function (PATH, METHOD, DATA) {
         DATA = DATA || '';
         const headers = {
-            'Accept': 'application/json',
-            'ngrok-skip-browser-warning':"true"
+            'Accept': 'application/json'
         };
         let url = QuoteAuthUrl + PATH;
         const opts = { method: METHOD, headers: headers };
