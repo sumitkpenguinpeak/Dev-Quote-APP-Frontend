@@ -26,7 +26,18 @@
      * CONFIG
      * ===================================================================== */
     const QuoteAuthUrl = window.PPQuoteApiUrl || '/apps/dev-quote-app';
-    const MONEY_FORMAT = window.PPQuoteMoneyFormat || '${{amount}}';
+    function defaultMoneyFormat() {
+        try {
+            const cur = window.Shopify && window.Shopify.currency && window.Shopify.currency.active;
+            if (cur) {
+                const part = new Intl.NumberFormat('en', { style: 'currency', currency: cur, currencyDisplay: 'narrowSymbol' })
+                    .formatToParts(1).find(function (x) { return x.type === 'currency'; });
+                if (part && part.value) return part.value + '{{amount}}';
+            }
+        } catch (e) { /* ignore */ }
+        return '${{amount}}';
+    }
+    const MONEY_FORMAT = window.PPQuoteMoneyFormat || defaultMoneyFormat();
     const STORAGE_KEY = 'ppQuoe__row';
     const SETTINGS_CACHE_KEY = 'ppQuoe__settings';
     const SETTINGS_CACHE_MS = 2 * 60 * 1000; // 2 min
@@ -770,6 +781,7 @@
                 row.querySelector('.product-total').textContent = formatMoney(item.original_price * qty);
                 writeStore(getQuoteLocalData);
                 QuotePriceClac();
+                scheduleShippingRates(); // qty badlay to shipping rates fari lavo
             });
         });
 
@@ -985,7 +997,7 @@
         };
     }
 
-    function renderShippingRates() {
+    function renderShippingRatesInner() {
         const wrap = document.getElementById('ppShippingMethod');
         const box = document.getElementById('ppShippingRates');
         if (!wrap || !box) return;
@@ -1020,8 +1032,13 @@
         h += '<p class="pp-ship-note">Estimated shipping. Final shipping is confirmed in your quote.</p>';
         box.innerHTML = h;
         box.querySelectorAll('input[name="shipping_rate"]').forEach(function (input) {
-            input.addEventListener('change', function () { ppShipState.handle = this.value; });
+            input.addEventListener('change', function () { ppShipState.handle = this.value; refreshTotals(); });
         });
+    }
+
+    function renderShippingRates() {
+        renderShippingRatesInner();
+        refreshTotals(); // select / badlay tyare niche Shipping + Total update
     }
 
     async function loadShippingRates() {
@@ -1245,17 +1262,29 @@
         });
     }
 
-    function QuotePriceClac() {
+    function selectedShippingRate() {
+        if (!ppShipState.handle) return null;
+        return ppShipState.rates.find(function (r) { return r.handle === ppShipState.handle; }) || null;
+    }
+
+    function calcTotals() {
         let subtotal = 0;
         QuoteLineItem.forEach(function (item) {
             subtotal += (parseInt(item.quantity, 10) || 0) * (Number(item.original_price) || 0);
         });
-        const sub = document.querySelector('.Quotesubtotal .amount');
-        const tot = document.querySelector('.total .amount');
-        if (sub) sub.textContent = formatMoney(subtotal);
-        if (tot) tot.textContent = formatMoney(subtotal);
-        const inner = document.querySelector('.totals-inner');
-        if (inner) inner.classList.remove('loader-total');
+        const rate = selectedShippingRate();
+        const shipping = rate ? (Number(rate.price) || 0) : 0;
+        return { subtotal: subtotal, rate: rate, shipping: shipping, total: subtotal + shipping };
+    }
+
+    function refreshTotals() {
+        const box = document.querySelector('.quote-wrapper .totals');
+        if (!box) return;
+        box.innerHTML = PPQuoteTotal();
+    }
+
+    function QuotePriceClac() {
+        refreshTotals();
     }
 
     /* ---------- HTML builders ---------- */
@@ -1483,19 +1512,22 @@
     }
 
     function PPQuoteTotal() {
-        let subtotal = 0;
-        QuoteLineItem.forEach(function (item) {
-            subtotal += (parseInt(item.quantity, 10) || 0) * (Number(item.original_price) || 0);
-        });
+        const t = calcTotals();
         let h = '<div class="totals-inner">';
-        if (subtotal !== 0) {
+        if (t.subtotal !== 0 || t.rate) {
             h += '<div class="total-row Quotesubtotal">';
             h += '<span>Subtotal</span>';
-            h += '<span class="amount">' + formatMoney(subtotal) + '</span>';
+            h += '<span class="amount">' + formatMoney(t.subtotal) + '</span>';
             h += '</div>';
+            if (t.rate) {
+                h += '<div class="total-row Quoteshipping">';
+                h += '<span>Shipping (' + esc(t.rate.title) + ')</span>';
+                h += '<span class="amount">' + (t.shipping > 0 ? formatMoney(t.shipping) : 'Free') + '</span>';
+                h += '</div>';
+            }
             h += '<div class="total-row total">';
             h += '<span>Total</span>';
-            h += '<span class="amount">' + formatMoney(subtotal) + '</span>';
+            h += '<span class="amount">' + formatMoney(t.total) + '</span>';
             h += '</div>';
         }
         h += '</div>';
