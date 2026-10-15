@@ -22,18 +22,18 @@ const RANGES = [
 /* ---------------- helpers ---------------- */  
 const money = (n, currency = 'USD') => {
   try {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(Number(n || 0));
+    return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(Number(n || 0));
   } catch {
-    return `$${Number(n || 0).toFixed(2)}`;
+    return `${currency} ${Number(n || 0).toFixed(2)}`;
   }
 };
 
 // y-axis mate nano format: $1.2K
 const compactMoney = (n, currency = 'USD') => {
   try {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency, notation: 'compact', maximumFractionDigits: 1 }).format(Number(n || 0));
+    return new Intl.NumberFormat(undefined, { style: 'currency', currency, notation: 'compact', maximumFractionDigits: 1 }).format(Number(n || 0));
   } catch {
-    return `$${n}`;
+    return `${currency} ${n}`;
   }
 };
 
