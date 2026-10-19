@@ -25,7 +25,10 @@
     /* =====================================================================
      * CONFIG
      * ===================================================================== */
-    const QuoteAuthUrl = window.PPQuoteApiUrl || '/apps/dev-quote-app';
+    // App proxy path: dev app = /apps/dev-quote-app, live app = /apps/quote-app (shopify.app.toml > [app_proxy] subpath).
+    // Path khotho hoy to Shopify 404 (HTML) aape chhe -> bijo path automatically try thay, jethi buttons gayab na thay.
+    const QUOTE_PROXY_CANDIDATES = window.PPQuoteApiUrl ? [window.PPQuoteApiUrl] : ['/apps/dev-quote-app', '/apps/quote-app'];
+    let quoteProxyIndex = 0;
     function defaultMoneyFormat() {
         try {
             const cur = window.Shopify && window.Shopify.currency && window.Shopify.currency.active;
@@ -276,21 +279,29 @@
         const headers = {
             'Accept': 'application/json'
         };
-        let url = QuoteAuthUrl + PATH;
         const opts = { method: METHOD, headers: headers };
+        let query = '';
 
         if (METHOD === 'GET') {
-            const qs = new URLSearchParams(DATA ? JSON.parse(DATA) : {}).toString();
-            if (qs) url += '?' + qs;
+            query = new URLSearchParams(DATA ? JSON.parse(DATA) : {}).toString();
+            if (query) query = '?' + query;
         } else {
             headers['Content-Type'] = 'application/json';
             opts.body = DATA;
         }
 
-        const response = await fetch(url, opts);
         let res = {};
-        try { res = await response.json(); } catch (e) { res = {}; }
-        if (res && typeof res === 'object') res._status = response.status;
+        // Chalu path thi shuru karo; proxy path na male (404 + JSON nahi) to next candidate
+        for (let n = 0; n < QUOTE_PROXY_CANDIDATES.length; n++) {
+            const idx = (quoteProxyIndex + n) % QUOTE_PROXY_CANDIDATES.length;
+            const response = await fetch(QUOTE_PROXY_CANDIDATES[idx] + PATH + query, opts);
+            let parsed = null;
+            try { parsed = await response.json(); } catch (e) { parsed = null; }
+            res = parsed || {};
+            if (res && typeof res === 'object') res._status = response.status;
+            const proxyMissing = response.status === 404 && parsed === null;
+            if (!proxyMissing) { quoteProxyIndex = idx; break; }
+        }
         return res;
     };
 
