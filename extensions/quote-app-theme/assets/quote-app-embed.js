@@ -277,7 +277,8 @@
     const PPQuoteAPIcallFack = async function (PATH, METHOD, DATA) {
         DATA = DATA || '';
         const headers = {
-            'Accept': 'application/json'
+            'Accept': 'application/json',
+            'ngrok-skip-browser-warning': 'true'
         };
         const opts = { method: METHOD, headers: headers };
         let query = '';
@@ -1080,7 +1081,10 @@
             if (req !== ppShipReq) return; // navo request aavi gayo
             const ok = res && res.success === true && res.data;
             const rates = ok && Array.isArray(res.data.rates) ? res.data.rates : [];
-            const keep = rates.some(function (r) { return r.handle === ppShipState.handle; }) ? ppShipState.handle : '';
+            // Customer e pehla thi select karyo rate hoy ane haju available hoy to e j rakho, nahi to pelo rate by default select
+            const keep = rates.some(function (r) { return r.handle === ppShipState.handle; })
+                ? ppShipState.handle
+                : (rates.length ? rates[0].handle : '');
             ppShipState = { handle: keep, rates: rates, reason: ok ? (res.data.reason || null) : 'error', loading: false, key: key, tax: ok ? (res.data.tax || null) : null };
         } catch (e) {
             if (req !== ppShipReq) return;
