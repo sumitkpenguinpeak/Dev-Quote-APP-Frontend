@@ -331,10 +331,39 @@ function ShippingModal({ open, value, quoteId, currency, onClose, onApply }) {
   );
 }
 
-function TaxModal({ open, value, currency, onClose, onApply }) {
+function TaxModal({ open, value, quoteId, currency, onClose, onApply }) {
   const [x, setX] = useDraft(open, value);
   const set = (k) => (v) => setX((p) => ({ ...p, [k]: v }));
   const pct = x.type === "percentage";
+
+  // Popup khule tyare Shopify store ni tax settings (customer na address pramane) lavo
+  const [storeTax, setStoreTax] = useState(null); // { rate, name, reason }
+  const [loadingTax, setLoadingTax] = useState(false);
+  useEffect(() => {
+    if (!open) return undefined;
+    let cancelled = false;
+    setLoadingTax(true);
+    setStoreTax(null);
+    api
+      .get(`/quotes/${encodeURIComponent(quoteId)}/store-tax`, { params: { shop: getShop() } })
+      .then((res) => { if (!cancelled) setStoreTax(res?.data?.data ?? null); })
+      .catch(() => { if (!cancelled) setStoreTax({ rate: null, name: null, reason: "request_failed" }); })
+      .finally(() => { if (!cancelled) setLoadingTax(false); });
+    return () => { cancelled = true; };
+  }, [open, quoteId]);
+
+  const TAX_REASON_TEXT = {
+    no_address: "Add the customer's shipping address (address and country) to load your Shopify store tax.",
+    no_items: "Add products to this quote to load your Shopify store tax.",
+    taxes_included: "Your Shopify store prices already include tax, so no extra tax is added.",
+    shopify_error: "Couldn't load your Shopify store tax. You can still add a custom tax.",
+    request_failed: "Couldn't load your Shopify store tax. You can still add a custom tax.",
+  };
+  const hasStoreTax = storeTax && storeTax.rate !== null && storeTax.rate !== undefined;
+
+  const useStoreTax = () =>
+    setX((p) => ({ ...p, type: "percentage", value: storeTax.rate, name: storeTax.name ?? p.name }));
+
   const apply = () => {
     const n = Math.max(0, Number(x.value) || 0);
     onApply({ ...x, value: pct ? Math.min(n, 100) : n });
@@ -345,6 +374,22 @@ function TaxModal({ open, value, currency, onClose, onApply }) {
       secondaryActions={[{ content: "Cancel", onAction: onClose }]}>
       <Modal.Section>
         <FormLayout>
+          {loadingTax && <Spinner size="small" />}
+          {!loadingTax && hasStoreTax && (
+            <Banner tone="info">
+              <BlockStack gap="200">
+                <Text as="p">
+                  Shopify store tax for this customer: {storeTax.rate}%{storeTax.name ? ` (${storeTax.name})` : ""}
+                </Text>
+                <InlineStack>
+                  <Button onClick={useStoreTax}>Use Shopify store tax</Button>
+                </InlineStack>
+              </BlockStack>
+            </Banner>
+          )}
+          {!loadingTax && storeTax && !hasStoreTax && TAX_REASON_TEXT[storeTax.reason] && (
+            <Banner tone="warning">{TAX_REASON_TEXT[storeTax.reason]}</Banner>
+          )}
           <FormLayout.Group>
             <Select label="Tax type" options={TYPE_OPTIONS} value={x.type} onChange={set("type")} />
             <TextField label="Tax value" type="number" min={0} autoComplete="off" placeholder="0.00"
@@ -1258,6 +1303,7 @@ export default function QuoteDetailPage() {
         onApply={(v) => { setExtras((p) => ({ ...p, shipping: v })); setModal(null); }}
       />
       <TaxModal
+        quoteId={quoteId}
         currency={getCurrency(quote)}
         open={modal === "tax"}
         value={extras.tax}
@@ -1451,7 +1497,7 @@ export default function QuoteDetailPage() {
                         : "")}
                     {taxAmt > 0 && taxWarn && (
                       <Banner tone="warning" onDismiss={() => setTaxWarn(false)}>
-                        This tax won't show up in draft order created from this quote.
+                        Draft order tax is calculated by Shopify from your store tax settings and the shipping address, so it can differ from this tax.
                       </Banner>
                     )}
                     <Divider />

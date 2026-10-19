@@ -1070,7 +1070,7 @@
             const ok = res && res.success === true && res.data;
             const rates = ok && Array.isArray(res.data.rates) ? res.data.rates : [];
             const keep = rates.some(function (r) { return r.handle === ppShipState.handle; }) ? ppShipState.handle : '';
-            ppShipState = { handle: keep, rates: rates, reason: ok ? (res.data.reason || null) : 'error', loading: false, key: key };
+            ppShipState = { handle: keep, rates: rates, reason: ok ? (res.data.reason || null) : 'error', loading: false, key: key, tax: ok ? (res.data.tax || null) : null };
         } catch (e) {
             if (req !== ppShipReq) return;
             ppShipState = { handle: '', rates: [], reason: 'error', loading: false, key: '' };
@@ -1274,7 +1274,10 @@
         });
         const rate = selectedShippingRate();
         const shipping = rate ? (Number(rate.price) || 0) : 0;
-        return { subtotal: subtotal, rate: rate, shipping: shipping, total: subtotal + shipping };
+        // Shopify store tax (estimate) - address ane items par aadharit, shipping-rates response sathe aave chhe
+        const taxInfo = ppShipState && !ppShipState.loading ? ppShipState.tax : null;
+        const tax = taxInfo ? (Number(taxInfo.amount) || 0) : 0;
+        return { subtotal: subtotal, rate: rate, shipping: shipping, taxInfo: taxInfo, tax: tax, total: subtotal + shipping + tax };
     }
 
     function refreshTotals() {
@@ -1523,6 +1526,13 @@
                 h += '<div class="total-row Quoteshipping">';
                 h += '<span>Shipping (' + esc(t.rate.title) + ')</span>';
                 h += '<span class="amount">' + (t.shipping > 0 ? formatMoney(t.shipping) : 'Free') + '</span>';
+                h += '</div>';
+            }
+            if (t.tax > 0) {
+                const taxLabel = [t.taxInfo.name, t.taxInfo.rate ? '(' + t.taxInfo.rate + '%)' : ''].filter(Boolean).join(' ');
+                h += '<div class="total-row Quotetax">';
+                h += '<span>Estimated tax' + (taxLabel ? ' (' + esc(taxLabel) + ')' : '') + '</span>';
+                h += '<span class="amount">' + formatMoney(t.tax) + '</span>';
                 h += '</div>';
             }
             h += '<div class="total-row total">';
